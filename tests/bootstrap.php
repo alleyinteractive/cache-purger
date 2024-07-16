@@ -9,4 +9,5 @@
 \Mantle\Testing\manager()
 	// Load the main file of the plugin.
 	->loaded( fn () => require_once __DIR__ . '/../plugin.php' )
+	->with_sqlite()
 	->install();
