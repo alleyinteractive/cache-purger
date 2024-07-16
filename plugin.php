@@ -3,7 +3,7 @@
  * Plugin Name: cache-collector
  * Plugin URI: https://github.com/alleyinteractive/cache-collector
  * Description: Dynamic cache key collector for easy purging.
- * Version: 0.2.0
+ * Version: 1.1.0
  * Author: Sean Fisher
  * Author URI: https://github.com/alleyinteractive/cache-collector
  * Requires at least: 5.9
