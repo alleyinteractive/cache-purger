@@ -16,3 +16,5 @@ jobs:
 
     - name: Run PHP Tests in src directory
       uses: alleyinteractive/action-test-php@develop
+      with:
+        skip-services: 'true'
