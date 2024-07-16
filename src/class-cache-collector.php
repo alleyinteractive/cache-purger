@@ -56,20 +56,20 @@ class Cache_Collector {
 	 *
 	 * Array of arrays with the key and group as the values.
 	 *
-	 * @var array<int, array<int, array<int, string>>
+	 * @var array<string, array<string, int>>
 	 */
 	protected array $pending_keys = [];
 
 	/**
 	 * Create a new Cache_Collector instance for a post.
 	 *
-	 * @param WP_Post|int $post    Post object/ID.
-	 * @param array       ...$args Arguments to pass to the constructor.
-	 * @return static
+	 * @param WP_Post|int          $post    Post object/ID.
+	 * @param LoggerInterface|null $logger  Logger to use.
+	 * @return self
 	 *
 	 * @throws InvalidArgumentException If the post is invalid.
 	 */
-	public static function for_post( WP_Post|int $post, array ...$args ): static {
+	public static function for_post( WP_Post|int $post, ?LoggerInterface $logger = null ): self {
 		if ( is_numeric( $post ) ) {
 			$post_id = $post;
 			$post    = get_post( $post );
@@ -80,22 +80,26 @@ class Cache_Collector {
 		}
 
 
-		return new static( "post-{$post->ID}", $post, ...$args );
+		return new self( "post-{$post->ID}", $post, $logger );
 	}
 
 	/**
 	 * Create a new Cache_Collector instance for a term.
 	 *
-	 * @param WP_Term|int $term    Term object/ID.
-	 * @param array       ...$args Arguments to pass to the constructor.
-	 * @return static
+	 * @param WP_Term|int          $term Term object/ID.
+	 * @param LoggerInterface|null $logger Logger to use.
+	 * @return self
 	 *
 	 * @throws InvalidArgumentException If the term is invalid.
 	 */
-	public static function for_term( WP_Term|int $term, array ...$args ) {
+	public static function for_term( WP_Term|int $term, ?LoggerInterface $logger = null ): self {
 		if ( is_numeric( $term ) ) {
 			$term_id = $term;
 			$term    = get_term( $term );
+
+			if ( is_wp_error( $term ) ) {
+				throw new InvalidArgumentException( esc_html( 'Invalid term: ' . $term->get_error_message() ) );
+			}
 
 			if ( empty( $term ) ) {
 				throw new InvalidArgumentException( 'Invalid term ID: ' . ( (int) $term_id ) );
@@ -103,7 +107,7 @@ class Cache_Collector {
 		}
 
 
-		return new static( "term-{$term->term_id}", $term, ...$args );
+		return new self( "term-{$term->term_id}", $term, $logger );
 	}
 
 	/**
@@ -111,11 +115,11 @@ class Cache_Collector {
 	 *
 	 * @param int $post_id Post ID.
 	 */
-	public static function on_post_update( int $post_id ) {
+	public static function on_post_update( int $post_id ): void {
 		$post = get_post( $post_id );
 
 		if ( $post ) {
-			static::for_post( $post )->purge();
+			self::for_post( $post )->purge();
 		}
 	}
 
@@ -124,18 +128,18 @@ class Cache_Collector {
 	 *
 	 * @param int[] $ids Term ID.
 	 */
-	public static function on_term_update( array $ids ) {
+	public static function on_term_update( array $ids ): void {
 		foreach ( $ids as $id ) {
-			static::for_term( $id )->purge();
+			self::for_term( $id )->purge();
 		}
 	}
 
 	/**
 	 * Register the post type for the cache collector.
 	 */
-	public static function register_post_type() {
+	public static function register_post_type(): void {
 		register_post_type( // phpcs:ignore WordPress.NamingConventions.ValidPostTypeSlug.NotStringLiteral
-			static::POST_TYPE,
+			self::POST_TYPE,
 			[
 				'public'             => false,
 				'publicly_queryable' => false,
@@ -150,7 +154,7 @@ class Cache_Collector {
 	 * it is not older than the threshold, it will check if the keys in the
 	 * collection it is storing are expired.
 	 */
-	public static function cleanup() {
+	public static function cleanup(): void {
 		$page  = 1;
 		$limit = 100;
 
@@ -177,7 +181,7 @@ class Cache_Collector {
 						],
 					],
 					'paged'            => $page++,
-					'post_type'        => static::POST_TYPE,
+					'post_type'        => self::POST_TYPE,
 					'posts_per_page'   => 100,
 					'suppress_filters' => false,
 				]
@@ -195,7 +199,9 @@ class Cache_Collector {
 					continue;
 				}
 
-				( new static( $collection, $post ) )->save();
+				if ( is_string( $collection ) ) {
+					( new self( $collection, $post ) )->save();
+				}
 			}
 		}
 	}
@@ -244,7 +250,7 @@ class Cache_Collector {
 			throw new InvalidArgumentException( esc_html( "Invalid cache type: {$type}." ) );
 		}
 
-		$pending_key = $key . static::DELIMITER . $group;
+		$pending_key = $key . self::DELIMITER . $group;
 
 		// Include the pending key for registration.
 		if ( ! isset( $this->pending_keys[ $type ][ $pending_key ] ) ) {
@@ -265,7 +271,7 @@ class Cache_Collector {
 		$original = $storage;
 
 		// Check if any of the existing keys are expired.
-		foreach ( [ static::CACHE_OBJECT_CACHE, static::CACHE_TRANSIENT ] as $type ) {
+		foreach ( [ self::CACHE_OBJECT_CACHE, self::CACHE_TRANSIENT ] as $type ) {
 			if ( empty( $storage[ $type ] ) ) {
 				continue;
 			}
@@ -280,7 +286,7 @@ class Cache_Collector {
 		}
 
 		// Append the pending keys for each cache type.
-		foreach ( [ static::CACHE_OBJECT_CACHE, static::CACHE_TRANSIENT ] as $type ) {
+		foreach ( [ self::CACHE_OBJECT_CACHE, self::CACHE_TRANSIENT ] as $type ) {
 			if ( empty( $this->pending_keys[ $type ] ) ) {
 				continue;
 			}
@@ -302,7 +308,7 @@ class Cache_Collector {
 		} elseif ( empty( $storage ) ) {
 			// Delete the parent object if there are no keys and if the parent
 			// is a cache collection post.
-			if ( $this->parent instanceof WP_Post && static::POST_TYPE === $this->parent->post_type ) {
+			if ( $this->parent instanceof WP_Post && self::POST_TYPE === $this->parent->post_type ) {
 				wp_delete_post( $this->parent->ID, true );
 
 				if ( $this->logger ) {
@@ -336,7 +342,7 @@ class Cache_Collector {
 
 		foreach ( $storage as $type => $keys ) {
 			$collection[ $type ] = array_map(
-				fn ( string $key ) => explode( static::DELIMITER, $key ),
+				fn ( string $key ) => explode( self::DELIMITER, $key ),
 				array_keys( $keys )
 			);
 		}
@@ -362,13 +368,13 @@ class Cache_Collector {
 
 		$dirty = false;
 
-		foreach ( [ static::CACHE_OBJECT_CACHE, static::CACHE_TRANSIENT ] as $type ) {
+		foreach ( [ self::CACHE_OBJECT_CACHE, self::CACHE_TRANSIENT ] as $type ) {
 			if ( empty( $storage[ $type ] ) ) {
 				continue;
 			}
 
 			foreach ( $storage[ $type ] as $index => $expiration ) {
-				[ $key, $cache_group ] = explode( static::DELIMITER, $index );
+				[ $key, $cache_group ] = explode( self::DELIMITER, $index );
 
 				// Check if the key is expired and should be removed.
 				if ( $expiration && $expiration < time() ) {
@@ -381,9 +387,8 @@ class Cache_Collector {
 
 				// Purge the cache.
 				$deleted = match ( $type ) {
-					static::CACHE_OBJECT_CACHE => wp_cache_delete( $key, $cache_group ),
-					static::CACHE_TRANSIENT => delete_transient( $key ),
-					default => false,
+					self::CACHE_OBJECT_CACHE => wp_cache_delete( $key, $cache_group ),
+					self::CACHE_TRANSIENT => delete_transient( $key ),
 				};
 
 				if ( $this->logger ) {
@@ -461,7 +466,7 @@ class Cache_Collector {
 				'name'             => $this->get_storage_name(),
 				'no_found_rows'    => true,
 				'post_status'      => 'publish',
-				'post_type'        => static::POST_TYPE,
+				'post_type'        => self::POST_TYPE,
 				'posts_per_page'   => 1,
 				'suppress_filters' => false,
 			]
@@ -481,7 +486,7 @@ class Cache_Collector {
 				'post_name'   => $this->get_storage_name(),
 				'post_status' => 'publish',
 				'post_title'  => $this->get_storage_name(),
-				'post_type'   => static::POST_TYPE,
+				'post_type'   => self::POST_TYPE,
 			],
 			true
 		);
@@ -515,14 +520,13 @@ class Cache_Collector {
 	 *
 	 * Not intended for public API usage {@see Cache_Collector::keys()}.
 	 *
-	 * @return array
+	 * @return array<string, array<string, int>>
 	 */
 	protected function get_storage(): array {
 		if ( $this->parent ) {
 			$keys = match ( $this->parent::class ) {
-				WP_Post::class => get_post_meta( $this->parent->ID, static::META_KEY, true ),
-				WP_Term::class => get_term_meta( $this->parent->term_id, static::META_KEY, true ),
-				default => [],
+				WP_Post::class => get_post_meta( $this->parent->ID, self::META_KEY, true ),
+				WP_Term::class => get_term_meta( $this->parent->term_id, self::META_KEY, true ),
 			};
 
 			return is_array( $keys ) ? $keys : [];
@@ -534,10 +538,10 @@ class Cache_Collector {
 	/**
 	 * Store keys in the parent post/term.
 	 *
-	 * @param array $keys The keys to store.
+	 * @param array<string, array<string, int>> $keys Keys to store.
 	 * @return void
 	 */
-	protected function store_keys( array $keys ) {
+	protected function store_keys( array $keys ): void {
 		$this->get_parent_object();
 
 		if ( ! $this->parent ) {
@@ -545,8 +549,8 @@ class Cache_Collector {
 		}
 
 		match ( $this->parent::class ) {
-			WP_Post::class => update_post_meta( $this->parent->ID, static::META_KEY, $keys ),
-			WP_Term::class => update_term_meta( $this->parent->term_id, static::META_KEY, $keys ),
+			WP_Post::class => update_post_meta( $this->parent->ID, self::META_KEY, $keys ),
+			WP_Term::class => update_term_meta( $this->parent->term_id, self::META_KEY, $keys ),
 		};
 	}
 }

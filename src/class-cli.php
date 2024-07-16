@@ -21,9 +21,9 @@ class CLI {
 	 * <collection>
 	 * : The name of the collection to purge.
 	 *
-	 * @param array $args Positional arguments.
+	 * @param array<string> $args Positional arguments.
 	 */
-	public function purge( $args ) {
+	public function purge( $args ): void {
 		[ $collection ] = $args;
 
 		$instance = new Cache_Collector( $collection, function_exists( 'ai_logger' ) ? ai_logger() : null );
@@ -39,13 +39,13 @@ class CLI {
 	 * <post>
 	 * : The ID of the post to purge.
 	 *
-	 * @param array $args Positional arguments.
+	 * @param array<string> $args Positional arguments.
 	 */
-	public function purge_post( $args ) {
+	public function purge_post( $args ): void {
 		[ $post ] = $args;
 
 		try {
-			Cache_Collector::for_post( $post )->purge();
+			Cache_Collector::for_post( (int) $post )->purge();
 		} catch ( Throwable $e ) {
 			\WP_CLI::error( 'Error purging: ' . $e->getMessage() );
 		}
@@ -59,13 +59,13 @@ class CLI {
 	 * <term>
 	 * : The ID of the term to purge.
 	 *
-	 * @param array $args Positional arguments.
+	 * @param array<string> $args Positional arguments.
 	 */
-	public function purge_term( $args ) {
+	public function purge_term( $args ): void {
 		[ $term ] = $args;
 
 		try {
-			Cache_Collector::for_term( $term )->purge();
+			Cache_Collector::for_term( (int) $term )->purge();
 		} catch ( Throwable $e ) {
 			\WP_CLI::error( 'Error purging: ' . $e->getMessage() );
 		}

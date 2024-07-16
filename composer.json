@@ -20,7 +20,9 @@
     "require-dev": {
         "alleyinteractive/alley-coding-standards": "^2.0",
         "alleyinteractive/composer-wordpress-autoloader": "^1.0",
-        "mantle-framework/testkit": "^1.0"
+        "mantle-framework/testkit": "^1.0",
+        "php-stubs/wp-cli-stubs": "^2.10",
+        "szepeviktor/phpstan-wordpress": "^1.3"
     },
     "suggest": {
         "psr/log": "For logging messages to when purging the cache"
@@ -45,9 +47,11 @@
     "scripts": {
         "phpcbf": "phpcbf .",
         "phpcs": "phpcs .",
+        "phpstan": "phpstan --memory-limit=512M",
         "phpunit": "phpunit",
         "test": [
             "@phpcs",
+            "@phpstan",
             "@phpunit"
         ]
     }
