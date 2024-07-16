@@ -75,7 +75,7 @@ class Cache_Collector {
 			$post    = get_post( $post );
 
 			if ( empty( $post ) ) {
-				throw new InvalidArgumentException( "Invalid post ID: {$post_id}" );
+				throw new InvalidArgumentException( 'Invalid post ID: ' . ( (int) $post_id ) );
 			}
 		}
 
@@ -98,7 +98,7 @@ class Cache_Collector {
 			$term    = get_term( $term );
 
 			if ( empty( $term ) ) {
-				throw new InvalidArgumentException( "Invalid term ID: {$term_id}" );
+				throw new InvalidArgumentException( 'Invalid term ID: ' . ( (int) $term_id ) );
 			}
 		}
 
@@ -241,7 +241,7 @@ class Cache_Collector {
 		}
 
 		if ( ! in_array( $type, [ self::CACHE_OBJECT_CACHE, self::CACHE_TRANSIENT ], true ) ) {
-			throw new InvalidArgumentException( "Invalid cache type: {$type}." );
+			throw new InvalidArgumentException( esc_html( "Invalid cache type: {$type}." ) );
 		}
 
 		$pending_key = $key . static::DELIMITER . $group;

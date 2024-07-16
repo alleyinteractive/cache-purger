@@ -22,9 +22,8 @@ class CLI {
 	 * : The name of the collection to purge.
 	 *
 	 * @param array $args Positional arguments.
-	 * @param array $assoc_args Associative arguments.
 	 */
-	public function purge( $args, $assoc_args ) {
+	public function purge( $args ) {
 		[ $collection ] = $args;
 
 		$instance = new Cache_Collector( $collection, function_exists( 'ai_logger' ) ? ai_logger() : null );
@@ -41,9 +40,8 @@ class CLI {
 	 * : The ID of the post to purge.
 	 *
 	 * @param array $args Positional arguments.
-	 * @param array $assoc_args Associative arguments.
 	 */
-	public function purge_post( $args, $assoc_args ) {
+	public function purge_post( $args ) {
 		[ $post ] = $args;
 
 		try {
@@ -62,9 +60,8 @@ class CLI {
 	 * : The ID of the term to purge.
 	 *
 	 * @param array $args Positional arguments.
-	 * @param array $assoc_args Associative arguments.
 	 */
-	public function purge_term( $args, $assoc_args ) {
+	public function purge_term( $args ) {
 		[ $term ] = $args;
 
 		try {
