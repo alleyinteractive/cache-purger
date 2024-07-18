@@ -7,7 +7,7 @@ use Mantle\Testkit\Test_Case;
 /**
  * Visit {@see https://mantle.alley.co/testing/test-framework.html} to learn more.
  */
-class Cache_Collector_Test extends Test_Case {
+class CacheCollectorTest extends Test_Case {
 	public function test_register_key() {
 		$instance = new Cache_Collector( __FUNCTION__ );
 

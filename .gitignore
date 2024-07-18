@@ -3,6 +3,7 @@ build
 vendor
 composer.lock
 node_modules
+.phpunit.cache
 
 # Log files
 *.log
